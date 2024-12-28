@@ -20,3 +20,7 @@ Future<void> playLocalAudio(String filePath) async {
     debugPrint('Error playing audio: $e');
   }
 }
+
+bool checkIsPlaying() {
+  return isPlaying;
+}

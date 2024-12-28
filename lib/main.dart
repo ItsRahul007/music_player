@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:music_player/audio_files.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:music_player/screens/audio_files.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {

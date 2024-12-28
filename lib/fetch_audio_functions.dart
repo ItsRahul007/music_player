@@ -42,7 +42,7 @@ Future<List<FileSystemEntity>> scanDirectory(Directory directory) async {
       }
     }
   } catch (e) {
-    print('Skipping directory: ${directory.path}');
+    debugPrint('Skipping directory: ${directory.path}');
   }
   return audioFiles;
 }
@@ -83,20 +83,7 @@ String formatFileSize(int bytes) {
 Future<Map<String, dynamic>?> iD3ProcessAudioFile(File file) async {
   try {
     List<int> mp3Bytes = File(file.path).readAsBytesSync();
-    MP3Instance mp3instance = new MP3Instance(mp3Bytes);
-
-// !{
-// !  "Title": "SongName",
-// !  "Artist": "ArtistName",
-// !  "Album": "AlbumName",
-// !  "APIC": {
-// !    "mime": "image/jpeg",
-// !    "textEncoding": "0",
-// !    "picType": "0",
-// !    "description": "description",
-// !    "base64": "AP/Y/+AAEEpGSUYAAQEBAE..."
-// !  }
-// !}
+    MP3Instance mp3instance = MP3Instance(mp3Bytes);
 
     if (mp3instance.parseTagsSync()) {
       // print(mp3instance.getMetaTags());
