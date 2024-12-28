@@ -1,82 +1,167 @@
-import 'package:flutter/material.dart';
+// Update music_bottom_widget.dart
 
-class SlidingBottomSheet extends StatefulWidget {
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:music_player/providers/music_player_provider.dart';
+import 'package:music_player/screens/music_fallback_icon.dart';
+
+class SlidingBottomSheet extends ConsumerWidget {
   const SlidingBottomSheet({super.key});
 
   @override
-  State<SlidingBottomSheet> createState() => _SlidingBottomSheetState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final playerState = ref.watch(musicPlayerProvider);
 
-class _SlidingBottomSheetState extends State<SlidingBottomSheet>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-    _animation = Tween<double>(begin: 1, end: 0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _closeSheet() {
-    _controller.reverse().then((_) {
-      Navigator.pop(context);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return Transform.translate(
-          offset:
-              Offset(0, MediaQuery.of(context).size.height * _animation.value),
-          child: Container(
-            height: 200, // Adjust height as needed
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.4, // 40% of screen height
+      decoration: BoxDecoration(
+        color: Colors.grey.shade900,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Drag handle
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            width: 40,
+            height: 4,
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black..withAlpha(26),
-                  spreadRadius: 1,
-                  blurRadius: 10,
-                  offset: const Offset(0, -2),
-                ),
-              ],
+              color: Colors.grey.shade600,
+              borderRadius: BorderRadius.circular(2),
             ),
-            child: Stack(
+          ),
+
+          // Song Info Row
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
               children: [
-                Positioned(
-                  left: 10,
-                  top: 10,
-                  child: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: _closeSheet,
+                if (playerState.currentSong?.base64Str != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.memory(
+                      base64Decode(playerState.currentSong!.base64Str!),
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        width: 60,
+                        height: 60,
+                        color: Colors.grey.shade800,
+                        child: Icon(Icons.music_note, color: Colors.white),
+                      ),
+                    ),
+                  )
+                else
+                  MusicFallbackIcon(
+                    iconSize: 60,
+                  ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        playerState.currentSong?.name ?? 'No song selected',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-        );
-      },
+
+          // Progress Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                SliderTheme(
+                  data: SliderThemeData(
+                    trackHeight: 4,
+                    thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
+                  ),
+                  child: Slider(
+                    value: playerState.position.inSeconds.toDouble(),
+                    max: playerState.duration.inSeconds.toDouble(),
+                    onChanged: (value) {
+                      ref.read(musicPlayerProvider.notifier).seekTo(
+                            Duration(seconds: value.toInt()),
+                          );
+                    },
+                    activeColor: Colors.white,
+                    inactiveColor: Colors.grey.shade800,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _formatDuration(playerState.position),
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                      Text(
+                        _formatDuration(playerState.duration),
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Control Buttons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: Icon(Icons.skip_previous, color: Colors.white, size: 32),
+                onPressed: () =>
+                    ref.read(musicPlayerProvider.notifier).playPrevious(),
+              ),
+              const SizedBox(width: 16),
+              IconButton(
+                icon: Icon(
+                  playerState.isPlaying
+                      ? Icons.pause_circle_filled
+                      : Icons.play_circle_filled,
+                  color: Colors.white,
+                  size: 48,
+                ),
+                onPressed: () =>
+                    ref.read(musicPlayerProvider.notifier).togglePlay(),
+              ),
+              const SizedBox(width: 16),
+              IconButton(
+                icon: Icon(Icons.skip_next, color: Colors.white, size: 32),
+                onPressed: () =>
+                    ref.read(musicPlayerProvider.notifier).playNext(),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$minutes:$seconds";
   }
 }

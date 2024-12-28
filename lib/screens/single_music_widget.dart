@@ -1,11 +1,15 @@
-import 'dart:convert';
+// Update single_music_widget.dart
 
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_player/fetch_audio_functions.dart';
+import 'package:music_player/providers/permission_provider.dart';
 import 'package:music_player/screens/music_bottom_widget.dart';
+import 'package:music_player/providers/music_player_provider.dart';
 import 'package:music_player/screens/music_fallback_icon.dart';
 
-class SingleMusicWidget extends StatelessWidget {
+class SingleMusicWidget extends ConsumerWidget {
   const SingleMusicWidget({
     super.key,
     required this.file,
@@ -16,19 +20,25 @@ class SingleMusicWidget extends StatelessWidget {
   final int index;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return ListTile(
       isThreeLine: true,
-      onTap: () {
-        //! build a bottom sheet and show the audio play pause option
-        showDialog(
+      onTap: () async {
+        // Get the current playlist from the permission provider
+        final playlist = ref.read(permissionProvider).audioFiles;
+        // Set the playlist and start playing from the tapped song
+        ref.read(musicPlayerProvider.notifier).setPlaylist(playlist, index);
+
+        // Show bottom sheet
+        showModalBottomSheet(
           context: context,
-          builder: (BuildContext context) {
-            return const SlidingBottomSheet();
-          },
+          backgroundColor: Colors.transparent,
+          isScrollControlled: true,
+          isDismissible: true,
+          enableDrag: true,
+          builder: (BuildContext context) => const SlidingBottomSheet(),
         );
       },
-      // () => playLocalAudio(file.path),
       leading: file.base64Str != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(4),
@@ -52,8 +62,9 @@ class SingleMusicWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-              '${formatFileSize(file.size)} | ${file.modified.toString().split('.')[0]}',
-              style: TextStyle(color: Colors.white70)),
+            '${formatFileSize(file.size)} | ${file.modified.toString().split('.')[0]}',
+            style: TextStyle(color: Colors.white70),
+          ),
         ],
       ),
     );

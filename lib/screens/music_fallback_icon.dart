@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 class MusicFallbackIcon extends StatelessWidget {
-  const MusicFallbackIcon({super.key});
+  final double? iconSize;
+  const MusicFallbackIcon({super.key, this.iconSize});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-        width: 45,
-        height: 45,
+        width: iconSize ?? 45,
+        height: iconSize ?? 45,
         decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(6),
             border: Border.all(
