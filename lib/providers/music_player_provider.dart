@@ -72,6 +72,8 @@ class MusicPlayerController extends StateNotifier<MusicPlayerState> {
         isLoading: playerState.processingState == ProcessingState.loading,
       );
     });
+
+    _audioPlayer.setLoopMode(LoopMode.all);
   }
 
   Future<void> setPlaylist(List<AudioFile> songs,

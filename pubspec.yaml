@@ -20,6 +20,7 @@ dependencies:
   just_audio: ^0.9.42
   id3: ^1.0.2
   flutter_riverpod: ^2.6.1
+  just_audio_background: ^0.0.1-beta.14
 
 dev_dependencies:
   flutter_test:
