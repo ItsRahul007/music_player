@@ -6,13 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_player/providers/music_player_provider.dart';
 import 'package:music_player/screens/music_fallback_icon.dart';
 
-class SlidingBottomSheet extends ConsumerWidget {
+class SlidingBottomSheet extends StatelessWidget {
   const SlidingBottomSheet({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final playerState = ref.watch(musicPlayerProvider);
-
+  Widget build(BuildContext context) {
     return Container(
       height: MediaQuery.of(context).size.height * 0.4, // 40% of screen height
       decoration: BoxDecoration(
@@ -36,123 +34,136 @@ class SlidingBottomSheet extends ConsumerWidget {
           ),
 
           // Song Info Row
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                if (playerState.currentSong?.base64Str != null)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.memory(
-                      base64Decode(playerState.currentSong!.base64Str!),
-                      width: 60,
-                      height: 60,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Container(
+          Consumer(builder: (context, ref, child) {
+            final musicImageAndTitle = ref.watch(musicImageAndTitleProvider);
+
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  if (musicImageAndTitle.image != null)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.memory(
+                        base64Decode(musicImageAndTitle.image!),
                         width: 60,
                         height: 60,
-                        color: Colors.grey.shade800,
-                        child: Icon(Icons.music_note, color: Colors.white),
-                      ),
-                    ),
-                  )
-                else
-                  MusicFallbackIcon(
-                    iconSize: 60,
-                  ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        playerState.currentSong?.name ?? 'No song selected',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 60,
+                          height: 60,
+                          color: Colors.grey.shade800,
+                          child: Icon(Icons.music_note, color: Colors.white),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
+                    )
+                  else
+                    MusicFallbackIcon(
+                      iconSize: 60,
+                    ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          musicImageAndTitle.title ?? 'No song selected',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
+                ],
+              ),
+            );
+          }),
 
           // Progress Bar
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
-                SliderTheme(
-                  data: SliderThemeData(
-                    trackHeight: 4,
-                    thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
-                  ),
-                  child: Slider(
-                    value: playerState.position.inSeconds.toDouble(),
-                    max: playerState.duration.inSeconds.toDouble(),
-                    onChanged: (value) {
-                      ref.read(musicPlayerProvider.notifier).seekTo(
-                            Duration(seconds: value.toInt()),
-                          );
-                    },
-                    activeColor: Colors.white,
-                    inactiveColor: Colors.grey.shade800,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        _formatDuration(playerState.position),
-                        style: TextStyle(color: Colors.white70),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Consumer(builder: (context, ref, child) {
+                final playerState = ref.watch(musicPlayerProvider);
+
+                return Column(
+                  children: [
+                    SliderTheme(
+                      data: SliderThemeData(
+                        trackHeight: 4,
+                        thumbShape:
+                            RoundSliderThumbShape(enabledThumbRadius: 6),
                       ),
-                      Text(
-                        _formatDuration(playerState.duration),
-                        style: TextStyle(color: Colors.white70),
+                      child: Slider(
+                        value: playerState.position.inSeconds.toDouble(),
+                        max: playerState.duration.inSeconds.toDouble(),
+                        onChanged: (value) {
+                          ref.read(musicPlayerProvider.notifier).seekTo(
+                                Duration(seconds: value.toInt()),
+                              );
+                        },
+                        activeColor: Colors.white,
+                        inactiveColor: Colors.grey.shade800,
                       ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _formatDuration(playerState.position),
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                          Text(
+                            _formatDuration(playerState.duration),
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              })),
 
           // Control Buttons
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                icon: Icon(Icons.skip_previous, color: Colors.white, size: 32),
-                onPressed: () =>
-                    ref.read(musicPlayerProvider.notifier).playPrevious(),
-              ),
-              const SizedBox(width: 16),
-              IconButton(
-                icon: Icon(
-                  playerState.isPlaying
-                      ? Icons.pause_circle_filled
-                      : Icons.play_circle_filled,
-                  color: Colors.white,
-                  size: 48,
+          Consumer(builder: (context, ref, child) {
+            final playerState = ref.watch(musicPlayerProvider);
+
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon:
+                      Icon(Icons.skip_previous, color: Colors.white, size: 32),
+                  onPressed: () =>
+                      ref.read(musicPlayerProvider.notifier).playPrevious(),
                 ),
-                onPressed: () =>
-                    ref.read(musicPlayerProvider.notifier).togglePlay(),
-              ),
-              const SizedBox(width: 16),
-              IconButton(
-                icon: Icon(Icons.skip_next, color: Colors.white, size: 32),
-                onPressed: () =>
-                    ref.read(musicPlayerProvider.notifier).playNext(),
-              ),
-            ],
-          ),
+                const SizedBox(width: 16),
+                IconButton(
+                  icon: Icon(
+                    playerState.isPlaying
+                        ? Icons.pause_circle_filled
+                        : Icons.play_circle_filled,
+                    color: Colors.white,
+                    size: 48,
+                  ),
+                  onPressed: () =>
+                      ref.read(musicPlayerProvider.notifier).togglePlay(),
+                ),
+                const SizedBox(width: 16),
+                IconButton(
+                  icon: Icon(Icons.skip_next, color: Colors.white, size: 32),
+                  onPressed: () =>
+                      ref.read(musicPlayerProvider.notifier).playNext(),
+                ),
+              ],
+            );
+          }),
         ],
       ),
     );

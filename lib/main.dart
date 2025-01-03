@@ -8,7 +8,7 @@ Future<void> main() async {
 
   await JustAudioBackground.init(
     androidNotificationChannelId: 'com.rahulka.music_player',
-    androidNotificationChannelName: 'Audio playback',
+    androidNotificationChannelName: 'Music Player',
     androidNotificationOngoing: true,
   );
   runApp(const ProviderScope(child: MyApp()));

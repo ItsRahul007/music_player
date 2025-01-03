@@ -21,13 +21,22 @@ class SingleMusicWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final playerState = ref.watch(musicPlayerProvider);
+    final setPlayState = ref.read(musicPlayerProvider.notifier);
+
     return ListTile(
       isThreeLine: true,
       onTap: () async {
         // Get the current playlist from the permission provider
         final playlist = ref.read(permissionProvider).audioFiles;
-        // Set the playlist and start playing from the tapped song
-        ref.read(musicPlayerProvider.notifier).setPlaylist(playlist, index);
+
+        if (playerState.currentSong == null ||
+            file.name != playerState.currentSong?.name) {
+          // Set the playlist and start playing from the tapped song
+          setPlayState.setPlaylist(playlist, index);
+        } else {
+          setPlayState.resumeAudio();
+        }
 
         // Show bottom sheet
         showModalBottomSheet(

@@ -1,8 +1,21 @@
 // Create a new file: lib/providers/music_player_provider.dart
 
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:music_player/fetch_audio_functions.dart';
+import 'package:path_provider/path_provider.dart';
+
+class MusicNameAndImageType {
+  final String? image;
+  final String? title;
+
+  MusicNameAndImageType({this.image, required this.title});
+}
 
 class MusicPlayerState {
   final AudioFile? currentSong;
@@ -86,10 +99,43 @@ class MusicPlayerController extends StateNotifier<MusicPlayerState> {
     await playAudio(songs[initialIndex]);
   }
 
+  resumeAudio() async {
+    await _audioPlayer.play();
+  }
+
+  Future<Uri> _base64ToNotificationImage(
+      String? base64String, String name) async {
+    final directory = await getTemporaryDirectory();
+    final imagePath = '${directory.path}/${name.split(" ").join("_")}.jpg';
+    final file = File(imagePath);
+
+    if (base64String != null && base64String.isNotEmpty) {
+      // Use base64 if available
+      final bytes = base64.decode(base64String);
+      await file.writeAsBytes(bytes);
+    } else {
+      // Fall back to asset image
+      final bytes = await rootBundle.load('asstes/images/logo.jpg');
+      await file.writeAsBytes(bytes.buffer.asUint8List());
+    }
+
+    return Uri.file(imagePath);
+  }
+
   Future<void> playAudio(AudioFile file) async {
     state = state.copyWith(isLoading: true, currentSong: file);
     try {
-      await _audioPlayer.setFilePath(file.path);
+      Uri filePath =
+          await _base64ToNotificationImage(file.base64Str, file.name);
+      final audioSource = AudioSource.uri(Uri.file(file.path),
+          tag: MediaItem(
+            id: file.path,
+            title: file.name,
+            album: file.artist ?? 'Unknown',
+            artUri: filePath,
+          ));
+
+      await _audioPlayer.setAudioSource(audioSource);
       await _audioPlayer.play();
     } finally {
       state = state.copyWith(isLoading: false);
@@ -130,4 +176,16 @@ final musicPlayerProvider =
   final controller = MusicPlayerController();
   controller.initPlayer();
   return controller;
+});
+
+// create a provider who will just return the image and title of the audio
+final musicImageAndTitleProvider = Provider<MusicNameAndImageType>((ref) {
+  final musicValues = ref.watch(musicPlayerProvider);
+
+  final data = MusicNameAndImageType(
+    image: musicValues.currentSong?.base64Str,
+    title: musicValues.currentSong?.name,
+  );
+
+  return data;
 });
