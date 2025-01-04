@@ -35,17 +35,17 @@ class SlidingBottomSheet extends StatelessWidget {
 
           // Song Info Row
           Consumer(builder: (context, ref, child) {
-            final musicImageAndTitle = ref.watch(musicImageAndTitleProvider);
+            final currentMusic = ref.watch(currentMusicProvider);
 
             return Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                  if (musicImageAndTitle.image != null)
+                  if (currentMusic != null && currentMusic.base64Str != null)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.memory(
-                        base64Decode(musicImageAndTitle.image!),
+                        base64Decode(currentMusic.base64Str!),
                         width: 60,
                         height: 60,
                         fit: BoxFit.cover,
@@ -67,7 +67,7 @@ class SlidingBottomSheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          musicImageAndTitle.title ?? 'No song selected',
+                          currentMusic?.name ?? 'No song selected',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -133,6 +133,8 @@ class SlidingBottomSheet extends StatelessWidget {
           // Control Buttons
           Consumer(builder: (context, ref, child) {
             final playerState = ref.watch(musicPlayerProvider);
+            final setPlayState = ref.read(musicPlayerProvider.notifier);
+            final setCurrentMusic = ref.watch(currentMusicProvider.notifier);
 
             return Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -140,8 +142,11 @@ class SlidingBottomSheet extends StatelessWidget {
                 IconButton(
                   icon:
                       Icon(Icons.skip_previous, color: Colors.white, size: 32),
-                  onPressed: () =>
-                      ref.read(musicPlayerProvider.notifier).playPrevious(),
+                  onPressed: () {
+                    setPlayState.playPrevious();
+                    setCurrentMusic.setCurrentMusic(
+                        playerState.playlist[playerState.currentIndex - 1]);
+                  },
                 ),
                 const SizedBox(width: 16),
                 IconButton(
@@ -152,14 +157,16 @@ class SlidingBottomSheet extends StatelessWidget {
                     color: Colors.white,
                     size: 48,
                   ),
-                  onPressed: () =>
-                      ref.read(musicPlayerProvider.notifier).togglePlay(),
+                  onPressed: () => setPlayState.togglePlay(),
                 ),
                 const SizedBox(width: 16),
                 IconButton(
                   icon: Icon(Icons.skip_next, color: Colors.white, size: 32),
-                  onPressed: () =>
-                      ref.read(musicPlayerProvider.notifier).playNext(),
+                  onPressed: () {
+                    setPlayState.playNext();
+                    setCurrentMusic.setCurrentMusic(
+                        playerState.playlist[playerState.currentIndex + 1]);
+                  },
                 ),
               ],
             );

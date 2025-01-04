@@ -1,5 +1,3 @@
-// Update single_music_widget.dart
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -21,8 +19,9 @@ class SingleMusicWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final playerState = ref.watch(musicPlayerProvider);
     final setPlayState = ref.read(musicPlayerProvider.notifier);
+    final currentMusic = ref.watch(currentMusicProvider);
+    final setCurrentMusic = ref.read(currentMusicProvider.notifier);
 
     return ListTile(
       isThreeLine: true,
@@ -30,9 +29,8 @@ class SingleMusicWidget extends ConsumerWidget {
         // Get the current playlist from the permission provider
         final playlist = ref.read(permissionProvider).audioFiles;
 
-        if (playerState.currentSong == null ||
-            file.name != playerState.currentSong?.name) {
-          // Set the playlist and start playing from the tapped song
+        if (currentMusic == null || file.name != currentMusic.name) {
+          setCurrentMusic.setCurrentMusic(file);
           setPlayState.setPlaylist(playlist, index);
         } else {
           setPlayState.resumeAudio();
@@ -65,14 +63,20 @@ class SingleMusicWidget extends ConsumerWidget {
         file.name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: Colors.white),
+        style: TextStyle(
+            color: file.name != currentMusic?.name
+                ? Colors.white
+                : Colors.blueAccent),
       ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             '${formatFileSize(file.size)} | ${file.modified.toString().split('.')[0]}',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(
+                color: file.name != currentMusic?.name
+                    ? Colors.white70
+                    : Colors.blueAccent.shade700),
           ),
         ],
       ),

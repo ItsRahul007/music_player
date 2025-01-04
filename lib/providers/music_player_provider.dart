@@ -115,7 +115,7 @@ class MusicPlayerController extends StateNotifier<MusicPlayerState> {
       await file.writeAsBytes(bytes);
     } else {
       // Fall back to asset image
-      final bytes = await rootBundle.load('asstes/images/logo.jpg');
+      final bytes = await rootBundle.load('assets/images/icon.jpg');
       await file.writeAsBytes(bytes.buffer.asUint8List());
     }
 
@@ -171,6 +171,20 @@ class MusicPlayerController extends StateNotifier<MusicPlayerState> {
   }
 }
 
+class CurrentMusic extends StateNotifier<AudioFile?> {
+  CurrentMusic() : super(null);
+
+  init() {
+    state = null;
+  }
+
+  get value => state;
+
+  setCurrentMusic(AudioFile file) {
+    state = file;
+  }
+}
+
 final musicPlayerProvider =
     StateNotifierProvider<MusicPlayerController, MusicPlayerState>((ref) {
   final controller = MusicPlayerController();
@@ -179,13 +193,9 @@ final musicPlayerProvider =
 });
 
 // create a provider who will just return the image and title of the audio
-final musicImageAndTitleProvider = Provider<MusicNameAndImageType>((ref) {
-  final musicValues = ref.watch(musicPlayerProvider);
-
-  final data = MusicNameAndImageType(
-    image: musicValues.currentSong?.base64Str,
-    title: musicValues.currentSong?.name,
-  );
-
-  return data;
+final currentMusicProvider =
+    StateNotifierProvider<CurrentMusic, AudioFile?>((ref) {
+  final controller = CurrentMusic();
+  controller.init();
+  return controller;
 });
