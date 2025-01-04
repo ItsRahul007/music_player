@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:music_player/constants/common.dart';
 import 'package:music_player/fetch_audio_functions.dart';
-import 'package:music_player/providers/permission_provider.dart';
+import 'package:music_player/providers/music_provider.dart';
 import 'package:music_player/screens/music_bottom_widget.dart';
 import 'package:music_player/providers/music_player_provider.dart';
 import 'package:music_player/screens/music_fallback_icon.dart';
@@ -27,7 +28,7 @@ class SingleMusicWidget extends ConsumerWidget {
       isThreeLine: true,
       onTap: () async {
         // Get the current playlist from the permission provider
-        final playlist = ref.read(permissionProvider).audioFiles;
+        final playlist = ref.read(musicProvider).audioFiles;
 
         if (currentMusic == null || file.name != currentMusic.name) {
           setCurrentMusic.setCurrentMusic(file);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_player/constants/common.dart';
+import 'package:music_player/providers/music_provider.dart';
 import 'package:music_player/providers/permission_provider.dart';
 import 'package:music_player/screens/loading.dart';
 import 'package:music_player/screens/single_music_widget.dart';
@@ -15,17 +16,33 @@ class AudioFileScanner extends ConsumerStatefulWidget {
 class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
   @override
   void initState() {
-    super.initState();
     Future(() async {
-      await ref.read(permissionProvider.notifier).requestAudioPermissions();
+      final permission = ref.watch(permissionProvider);
+      if (permission.havePermission) {
+        await ref.read(musicProvider.notifier).scanForAudioFiles();
+      } else {
+        final state = await ref
+            .read(permissionProvider.notifier)
+            .requestAudioPermissions();
+        if (state) {
+          await ref.read(musicProvider.notifier).scanForAudioFiles();
+        }
+      }
     });
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    final permissionState = ref.watch(permissionProvider);
+    final music = ref.watch(musicProvider);
+    final changeMusic = ref.read(musicProvider.notifier);
+    final permission = ref.watch(permissionProvider);
 
-    if (permissionState.isLoading) return const Loading();
+    debugPrint("havePermission: ${permission.havePermission}");
+
+    if (music.isLoading || permission.isLoading) {
+      return const Loading();
+    }
 
     return Scaffold(
         backgroundColor: Colors.grey.shade900,
@@ -47,7 +64,7 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
                 ),
                 SizedBox(width: 15),
                 DropdownButton<String>(
-                  value: permissionState.dropdownValue,
+                  value: music.dropdownValue,
                   items: orderByOptions.map((String value) {
                     return DropdownMenuItem<String>(
                       value: value,
@@ -59,9 +76,7 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
                   }).toList(),
                   onChanged: (String? value) {
                     if (value != null) {
-                      ref
-                          .read(permissionProvider.notifier)
-                          .changeAudioFilesArrayOrder(value);
+                      changeMusic.changeAudioFilesArrayOrder(value);
                     }
                   },
                   elevation: 16,
@@ -73,7 +88,7 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
           backgroundColor: Colors.grey.shade900,
           elevation: 50,
         ),
-        body: !permissionState.havePermission
+        body: !permission.havePermission
             ? Center(
                 child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -82,21 +97,46 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
                       style: TextStyle(color: Colors.white, fontSize: 18)),
                   SizedBox(height: 10),
                   ElevatedButton(
-                    onPressed: () async {
-                      await ref
-                          .read(permissionProvider.notifier)
-                          .manualRequestPermission();
-                    },
-                    child: const Text("Request Permission"),
-                  )
+                      onPressed: () async {
+                        if (music.audioFiles.isEmpty &&
+                            permission.havePermission) {
+                          changeMusic.scanForAudioFiles();
+                        } else {
+                          await ref
+                              .read(permissionProvider.notifier)
+                              .manualRequestPermission();
+                        }
+                      },
+                      child: permission.havePermission
+                          ? const Text("Scan for audio")
+                          : const Text("Give Permission"))
                 ],
               ))
-            : ListView.builder(
-                itemBuilder: (context, index) => SingleMusicWidget(
-                  file: permissionState.audioFiles[index],
-                  index: index,
-                ),
-                itemCount: permissionState.audioFiles.length,
-              ));
+            : music.audioFiles.isNotEmpty
+                ? ListView.builder(
+                    itemBuilder: (context, index) => SingleMusicWidget(
+                      file: music.audioFiles[index],
+                      index: index,
+                    ),
+                    itemCount: music.audioFiles.length,
+                  )
+                : Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text("Didn't got any music files",
+                            style:
+                                TextStyle(color: Colors.white, fontSize: 18)),
+                        ElevatedButton(
+                            onPressed: () {
+                              if (music.audioFiles.isEmpty &&
+                                  permission.havePermission) {
+                                changeMusic.scanForAudioFiles();
+                              }
+                            },
+                            child: const Text("Scan for audio"))
+                      ],
+                    ),
+                  ));
   }
 }

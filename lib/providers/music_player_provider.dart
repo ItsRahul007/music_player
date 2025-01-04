@@ -1,5 +1,3 @@
-// Create a new file: lib/providers/music_player_provider.dart
-
 import 'dart:convert';
 import 'dart:io';
 
@@ -7,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:just_audio_background/just_audio_background.dart';
-import 'package:music_player/fetch_audio_functions.dart';
+import 'package:music_player/constants/common.dart';
 import 'package:path_provider/path_provider.dart';
 
 class MusicNameAndImageType {
