@@ -1,12 +1,6 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:just_audio_background/just_audio_background.dart';
 import 'package:music_player/constants/common.dart';
-import 'package:path_provider/path_provider.dart';
 
 class MusicNameAndImageType {
   final String? image;
@@ -16,8 +10,7 @@ class MusicNameAndImageType {
 }
 
 class MusicPlayerState {
-  final AudioFile? currentSong;
-  final List<AudioFile> playlist;
+  final ConcatenatingAudioSource playlist;
   final bool isPlaying;
   final bool isLoading;
   final Duration position;
@@ -25,7 +18,6 @@ class MusicPlayerState {
   final int currentIndex;
 
   MusicPlayerState({
-    this.currentSong,
     required this.playlist,
     this.isPlaying = false,
     this.isLoading = false,
@@ -35,8 +27,7 @@ class MusicPlayerState {
   });
 
   MusicPlayerState copyWith({
-    AudioFile? currentSong,
-    List<AudioFile>? playlist,
+    ConcatenatingAudioSource? playlist,
     bool? isPlaying,
     bool? isLoading,
     Duration? position,
@@ -44,7 +35,6 @@ class MusicPlayerState {
     int? currentIndex,
   }) {
     return MusicPlayerState(
-      currentSong: currentSong ?? this.currentSong,
       playlist: playlist ?? this.playlist,
       isPlaying: isPlaying ?? this.isPlaying,
       isLoading: isLoading ?? this.isLoading,
@@ -56,7 +46,9 @@ class MusicPlayerState {
 }
 
 class MusicPlayerController extends StateNotifier<MusicPlayerState> {
-  MusicPlayerController() : super(MusicPlayerState(playlist: []));
+  MusicPlayerController()
+      : super(
+            MusicPlayerState(playlist: ConcatenatingAudioSource(children: [])));
 
   final AudioPlayer _audioPlayer = AudioPlayer();
 
@@ -87,53 +79,23 @@ class MusicPlayerController extends StateNotifier<MusicPlayerState> {
     _audioPlayer.setLoopMode(LoopMode.all);
   }
 
-  Future<void> setPlaylist(List<AudioFile> songs,
+  Future<void> setPlaylist(ConcatenatingAudioSource songs,
       [int initialIndex = 0]) async {
     state = state.copyWith(
       playlist: songs,
       currentIndex: initialIndex,
-      currentSong: songs[initialIndex],
     );
-    await playAudio(songs[initialIndex]);
+    await _audioPlayer.setAudioSource(songs);
+    await playAudio(songs.children[initialIndex]);
   }
 
   resumeAudio() async {
     await _audioPlayer.play();
   }
 
-  Future<Uri> _base64ToNotificationImage(
-      String? base64String, String name) async {
-    final directory = await getTemporaryDirectory();
-    final imagePath = '${directory.path}/${name.split(" ").join("_")}.jpg';
-    final file = File(imagePath);
-
-    if (base64String != null && base64String.isNotEmpty) {
-      // Use base64 if available
-      final bytes = base64.decode(base64String);
-      await file.writeAsBytes(bytes);
-    } else {
-      // Fall back to asset image
-      final bytes = await rootBundle.load('assets/images/icon.jpg');
-      await file.writeAsBytes(bytes.buffer.asUint8List());
-    }
-
-    return Uri.file(imagePath);
-  }
-
-  Future<void> playAudio(AudioFile file) async {
-    state = state.copyWith(isLoading: true, currentSong: file);
+  Future<void> playAudio(AudioSource file) async {
+    state = state.copyWith(isLoading: true);
     try {
-      Uri filePath =
-          await _base64ToNotificationImage(file.base64Str, file.name);
-      final audioSource = AudioSource.uri(Uri.file(file.path),
-          tag: MediaItem(
-            id: file.path,
-            title: file.name,
-            album: file.artist ?? 'Unknown',
-            artUri: filePath,
-          ));
-
-      await _audioPlayer.setAudioSource(audioSource);
       await _audioPlayer.play();
     } finally {
       state = state.copyWith(isLoading: false);

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -31,37 +32,66 @@ class PermissionProvider extends StateNotifier<PermissionState> {
   Future<bool> requestAudioPermissions() async {
     state = state.copyWith(isLoading: true);
 
-    final isPermissionAlreadyGranted = await checkAudioPermissions();
-    if (isPermissionAlreadyGranted) {
-      state = state.copyWith(havePermission: true, isLoading: false);
-      return true;
-    } else {
-      final status = await Permission.audio.request();
-      if (status.isGranted) {
+    try {
+      final isPermissionAlreadyGranted = await checkAudioPermissions();
+      if (isPermissionAlreadyGranted) {
         state = state.copyWith(havePermission: true, isLoading: false);
         return true;
-      }
-    }
+      } else {
+        final statuses = await [
+          Permission.audio,
+          Permission.manageExternalStorage,
+          Permission.notification,
+        ].request();
 
-    state = state.copyWith(isLoading: false, havePermission: false);
-    return false;
+        debugPrint("statuses: ${statuses.toString()}");
+
+        final bool isPermissionGranted =
+            statuses[Permission.audio]!.isGranted &&
+                statuses[Permission.manageExternalStorage]!.isGranted;
+
+        if (isPermissionGranted) {
+          state = state.copyWith(havePermission: true, isLoading: false);
+          return true;
+        }
+      }
+
+      state = state.copyWith(isLoading: false, havePermission: false);
+      return false;
+    } catch (e) {
+      debugPrint(e.toString());
+      return false;
+    }
   }
 
   Future<void> manualRequestPermission() async {
     state = state.copyWith(isLoading: true);
 
-    PermissionStatus status = await Permission.audio.status;
+    PermissionStatus audioStatus = await Permission.audio.status;
+    PermissionStatus manageExternalStorageStatus =
+        await Permission.manageExternalStorage.status;
 
-    if (status.isPermanentlyDenied) {
+    if (audioStatus.isPermanentlyDenied ||
+        manageExternalStorageStatus.isPermanentlyDenied) {
       await openAppSettings();
-      await Future.delayed(Duration(milliseconds: 500));
-      status = await Permission.audio.status;
-      if (status.isGranted) {
+      audioStatus = await Permission.audio.status;
+      manageExternalStorageStatus =
+          await Permission.manageExternalStorage.status;
+      if (audioStatus.isGranted && manageExternalStorageStatus.isGranted) {
         state = state.copyWith(havePermission: true);
       }
     } else {
-      status = await Permission.audio.request();
-      if (status.isGranted) {
+      //? Request permissions once again
+      final requestPermission = await [
+        Permission.audio,
+        Permission.manageExternalStorage,
+        Permission.notification
+      ].request();
+
+      debugPrint("requestPermission: ${requestPermission.toString()}");
+
+      if (requestPermission[Permission.audio]!.isGranted &&
+          requestPermission[Permission.manageExternalStorage]!.isGranted) {
         state = state.copyWith(havePermission: true);
       } else {
         state = state.copyWith(havePermission: false);
@@ -72,7 +102,8 @@ class PermissionProvider extends StateNotifier<PermissionState> {
   }
 
   Future<bool> checkAudioPermissions() async {
-    bool permission = await Permission.audio.isGranted;
+    bool permission = await Permission.audio.isGranted &&
+        await Permission.manageExternalStorage.isGranted;
     state = state.copyWith(havePermission: permission);
     return permission;
   }

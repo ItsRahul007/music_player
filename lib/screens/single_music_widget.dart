@@ -32,7 +32,7 @@ class SingleMusicWidget extends ConsumerWidget {
         isThreeLine: true,
         onTap: () async {
           // Get the current playlist from the permission provider
-          final playlist = ref.read(musicProvider).audioFiles;
+          final playlist = ref.read(musicProvider).playList;
 
           if (currentMusic == null || file.name != currentMusic.name) {
             setCurrentMusic.setCurrentMusic(file);

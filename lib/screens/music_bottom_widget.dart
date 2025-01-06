@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_player/fetch_audio_functions.dart';
 import 'package:music_player/providers/music_player_provider.dart';
+import 'package:music_player/providers/music_provider.dart';
 import 'package:music_player/screens/music_fallback_icon.dart';
 
 class SlidingBottomSheet extends StatelessWidget {
@@ -136,6 +137,7 @@ class SlidingBottomSheet extends StatelessWidget {
             final playerState = ref.watch(musicPlayerProvider);
             final setPlayState = ref.read(musicPlayerProvider.notifier);
             final setCurrentMusic = ref.watch(currentMusicProvider.notifier);
+            final musics = ref.watch(musicProvider);
 
             return Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -146,7 +148,7 @@ class SlidingBottomSheet extends StatelessWidget {
                   onPressed: () {
                     setPlayState.playPrevious();
                     setCurrentMusic.setCurrentMusic(
-                        playerState.playlist[playerState.currentIndex - 1]);
+                        musics.audioFiles[playerState.currentIndex - 1]);
                   },
                 ),
                 const SizedBox(width: 16),
@@ -166,7 +168,7 @@ class SlidingBottomSheet extends StatelessWidget {
                   onPressed: () {
                     setPlayState.playNext();
                     setCurrentMusic.setCurrentMusic(
-                        playerState.playlist[playerState.currentIndex + 1]);
+                        musics.audioFiles[playerState.currentIndex + 1]);
                   },
                 ),
               ],

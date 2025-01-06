@@ -1,29 +1,38 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:id3/id3.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:just_audio_background/just_audio_background.dart';
 import 'package:music_player/constants/common.dart';
+import 'package:path_provider/path_provider.dart';
 
 class MusicProviderState {
   final List<AudioFile> audioFiles;
   final String dropdownValue;
   final bool isLoading;
+  final ConcatenatingAudioSource playList;
 
   MusicProviderState(
       {required this.audioFiles,
       required this.dropdownValue,
+      required this.playList,
       this.isLoading = false});
 
   MusicProviderState copyWith({
     List<AudioFile>? audioFiles,
     String? dropdownValue,
     bool? isLoading,
+    ConcatenatingAudioSource? playList,
   }) {
     return MusicProviderState(
       audioFiles: audioFiles ?? this.audioFiles,
       dropdownValue: dropdownValue ?? this.dropdownValue,
       isLoading: isLoading ?? this.isLoading,
+      playList: playList ?? this.playList,
     );
   }
 }
@@ -31,9 +40,11 @@ class MusicProviderState {
 class MusicProvider extends StateNotifier<MusicProviderState> {
   MusicProvider()
       : super(MusicProviderState(
-            audioFiles: [], dropdownValue: orderByOptions.first));
+            audioFiles: [],
+            dropdownValue: orderByOptions.first,
+            playList: ConcatenatingAudioSource(children: [])));
 
-  get value => state.audioFiles;
+  get value => state;
 
   Future<void> scanForAudioFiles() async {
     state = state.copyWith(isLoading: true);
@@ -122,8 +133,46 @@ class MusicProvider extends StateNotifier<MusicProviderState> {
     }
   }
 
-  void changeAudioFilesArrayOrder(String type) {
+  Future<Uri> _base64ToNotificationImage(
+      String? base64String, String name) async {
+    final directory = await getTemporaryDirectory();
+    final imagePath = '${directory.path}/${name.split(" ").join("_")}.jpg';
+    final file = File(imagePath);
+
+    if (base64String != null && base64String.isNotEmpty) {
+      // Use base64 if available
+      final bytes = base64.decode(base64String);
+      await file.writeAsBytes(bytes);
+    } else {
+      // Fall back to asset image
+      final bytes = await rootBundle.load('assets/images/icon.jpg');
+      await file.writeAsBytes(bytes.buffer.asUint8List());
+    }
+
+    return Uri.file(imagePath);
+  }
+
+  _setPlayList(List<AudioFile> files) async {
+    final list = await Future.wait(files.map((file) async {
+      Uri filePath =
+          await _base64ToNotificationImage(file.base64Str, file.name);
+
+      return AudioSource.uri(Uri.file(file.path),
+          tag: MediaItem(
+            id: file.path,
+            title: file.name,
+            album: file.artist ?? 'Unknown',
+            artUri: filePath,
+          ));
+    }).toList());
+
+    final playList = ConcatenatingAudioSource(children: list);
+    state = state.copyWith(playList: playList);
+  }
+
+  void changeAudioFilesArrayOrder(String type) async {
     if (state.audioFiles.isEmpty) return;
+    state = state.copyWith(isLoading: true);
 
     List<AudioFile> sortedFiles = [...state.audioFiles];
 
@@ -137,10 +186,20 @@ class MusicProvider extends StateNotifier<MusicProviderState> {
       sortedFiles.sort((a, b) => a.modified.compareTo(b.modified));
     }
 
+    await _setPlayList(sortedFiles);
+
     state = state.copyWith(
-      audioFiles: sortedFiles,
-      dropdownValue: type,
-    );
+        audioFiles: sortedFiles, dropdownValue: type, isLoading: false);
+  }
+
+  void deleteAudioFile(String path) {
+    final file = File(path);
+    if (file.existsSync()) {
+      file.deleteSync();
+      debugPrint("File deleted successfully");
+    } else {
+      debugPrint("File not found");
+    }
   }
 }
 

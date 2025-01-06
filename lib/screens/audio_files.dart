@@ -94,32 +94,33 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
           backgroundColor: Colors.grey.shade900,
           elevation: 50,
         ),
-        body: !permission.havePermission
-            ? DoNotHavePermission()
-            : music.audioFiles.isNotEmpty
-                ? Stack(
-                    children: [
-                      ListView.builder(
-                        itemCount: music.audioFiles.length,
-                        itemBuilder: (context, index) => SingleMusicWidget(
-                          file: music.audioFiles[index],
-                          index: index,
-                          isLast: index == music.audioFiles.length - 1 &&
-                              currentPlayingMusic != null,
-                        ),
-                      ),
-                      currentPlayingMusic != null
-                          ? Align(
-                              alignment: Alignment.bottomCenter,
-                              child: _bottomBar())
-                          : SizedBox.shrink(),
-                    ],
-                  )
-                : EmptyMusics());
+        body: SafeArea(
+            child: !permission.havePermission
+                ? DoNotHavePermission()
+                : music.audioFiles.isNotEmpty
+                    ? Stack(
+                        children: [
+                          ListView.builder(
+                            itemCount: music.audioFiles.length,
+                            itemBuilder: (context, index) => SingleMusicWidget(
+                              file: music.audioFiles[index],
+                              index: index,
+                              isLast: index == music.audioFiles.length - 1 &&
+                                  currentPlayingMusic != null,
+                            ),
+                          ),
+                          currentPlayingMusic != null
+                              ? Align(
+                                  alignment: Alignment.bottomCenter,
+                                  child: _bottomBar())
+                              : SizedBox.shrink(),
+                        ],
+                      )
+                    : EmptyMusics()));
   }
 
   Widget _bottomBar() {
-    void _onWidgetClick() {
+    void onWidgetClick() {
       showModalBottomSheet(
         context: context,
         backgroundColor: Colors.transparent,
@@ -148,7 +149,7 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
             if (currentPlayingMusic != null &&
                 currentPlayingMusic.base64Str != null)
               InkWell(
-                onTap: () => _onWidgetClick(),
+                onTap: () => onWidgetClick(),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.memory(
@@ -167,7 +168,7 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
               )
             else
               InkWell(
-                onTap: () => _onWidgetClick(),
+                onTap: () => onWidgetClick(),
                 child: MusicFallbackIcon(
                   iconSize: 50,
                 ),
@@ -178,7 +179,7 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   InkWell(
-                    onTap: () => _onWidgetClick(),
+                    onTap: () => onWidgetClick(),
                     child: Text(
                       currentPlayingMusic?.name ?? 'No song selected',
                       style: TextStyle(
@@ -195,6 +196,7 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
                     final setPlayState = ref.read(musicPlayerProvider.notifier);
                     final setCurrentMusic =
                         ref.watch(currentMusicProvider.notifier);
+                    final musics = ref.watch(musicProvider);
 
                     return Expanded(
                       child: Row(
@@ -206,8 +208,8 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
                                 color: Colors.white, size: 30),
                             onPressed: () {
                               setPlayState.playPrevious();
-                              setCurrentMusic.setCurrentMusic(playerState
-                                  .playlist[playerState.currentIndex - 1]);
+                              setCurrentMusic.setCurrentMusic(musics
+                                  .audioFiles[playerState.currentIndex - 1]);
                             },
                           ),
                           const SizedBox(width: 10),
@@ -227,8 +229,8 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
                                 color: Colors.white, size: 30),
                             onPressed: () {
                               setPlayState.playNext();
-                              setCurrentMusic.setCurrentMusic(playerState
-                                  .playlist[playerState.currentIndex + 1]);
+                              setCurrentMusic.setCurrentMusic(musics
+                                  .audioFiles[playerState.currentIndex + 1]);
                             },
                           ),
                         ],
