@@ -1,9 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_player/constants/common.dart';
+import 'package:music_player/providers/music_player_provider.dart';
 import 'package:music_player/providers/music_provider.dart';
 import 'package:music_player/providers/permission_provider.dart';
+import 'package:music_player/screens/do_not_have_permission.dart';
+import 'package:music_player/screens/empty_musics.dart';
 import 'package:music_player/screens/loading.dart';
+import 'package:music_player/screens/music_bottom_widget.dart';
+import 'package:music_player/screens/music_fallback_icon.dart';
 import 'package:music_player/screens/single_music_widget.dart';
 
 class AudioFileScanner extends ConsumerStatefulWidget {
@@ -37,8 +44,7 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
     final music = ref.watch(musicProvider);
     final changeMusic = ref.read(musicProvider.notifier);
     final permission = ref.watch(permissionProvider);
-
-    debugPrint("havePermission: ${permission.havePermission}");
+    final currentPlayingMusic = ref.watch(currentMusicProvider);
 
     if (music.isLoading || permission.isLoading) {
       return const Loading();
@@ -89,54 +95,152 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
           elevation: 50,
         ),
         body: !permission.havePermission
-            ? Center(
-                child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Permission is required to access audio files.',
-                      style: TextStyle(color: Colors.white, fontSize: 18)),
-                  SizedBox(height: 10),
-                  ElevatedButton(
-                      onPressed: () async {
-                        if (music.audioFiles.isEmpty &&
-                            permission.havePermission) {
-                          changeMusic.scanForAudioFiles();
-                        } else {
-                          await ref
-                              .read(permissionProvider.notifier)
-                              .manualRequestPermission();
-                        }
-                      },
-                      child: permission.havePermission
-                          ? const Text("Scan for audio")
-                          : const Text("Give Permission"))
-                ],
-              ))
+            ? DoNotHavePermission()
             : music.audioFiles.isNotEmpty
-                ? ListView.builder(
-                    itemBuilder: (context, index) => SingleMusicWidget(
-                      file: music.audioFiles[index],
-                      index: index,
-                    ),
-                    itemCount: music.audioFiles.length,
+                ? Stack(
+                    children: [
+                      ListView.builder(
+                        itemCount: music.audioFiles.length,
+                        itemBuilder: (context, index) => SingleMusicWidget(
+                          file: music.audioFiles[index],
+                          index: index,
+                          isLast: index == music.audioFiles.length - 1 &&
+                              currentPlayingMusic != null,
+                        ),
+                      ),
+                      currentPlayingMusic != null
+                          ? Align(
+                              alignment: Alignment.bottomCenter,
+                              child: _bottomBar())
+                          : SizedBox.shrink(),
+                    ],
                   )
-                : Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text("Didn't got any music files",
-                            style:
-                                TextStyle(color: Colors.white, fontSize: 18)),
-                        ElevatedButton(
-                            onPressed: () {
-                              if (music.audioFiles.isEmpty &&
-                                  permission.havePermission) {
-                                changeMusic.scanForAudioFiles();
-                              }
-                            },
-                            child: const Text("Scan for audio"))
-                      ],
+                : EmptyMusics());
+  }
+
+  Widget _bottomBar() {
+    void _onWidgetClick() {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        isDismissible: true,
+        enableDrag: true,
+        builder: (BuildContext context) => const SlidingBottomSheet(),
+      );
+    }
+
+    return Consumer(builder: (context, ref, child) {
+      final currentPlayingMusic = ref.watch(currentMusicProvider);
+      return Container(
+        height: 70,
+        margin: EdgeInsets.only(left: 15, right: 15, bottom: 15),
+        padding: EdgeInsets.only(left: 5, right: 5, top: 5, bottom: 5),
+        decoration: BoxDecoration(
+            color: Colors.grey.shade800,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.grey.shade900, blurRadius: 10, spreadRadius: 10)
+            ]),
+        child: Row(
+          children: [
+            if (currentPlayingMusic != null &&
+                currentPlayingMusic.base64Str != null)
+              InkWell(
+                onTap: () => _onWidgetClick(),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.memory(
+                    base64Decode(currentPlayingMusic.base64Str!),
+                    width: 50,
+                    height: 50,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      width: 50,
+                      height: 50,
+                      color: Colors.grey.shade800,
+                      child: Icon(Icons.music_note, color: Colors.white),
                     ),
-                  ));
+                  ),
+                ),
+              )
+            else
+              InkWell(
+                onTap: () => _onWidgetClick(),
+                child: MusicFallbackIcon(
+                  iconSize: 50,
+                ),
+              ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  InkWell(
+                    onTap: () => _onWidgetClick(),
+                    child: Text(
+                      currentPlayingMusic?.name ?? 'No song selected',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Consumer(builder: (context, ref, child) {
+                    final playerState = ref.watch(musicPlayerProvider);
+                    final setPlayState = ref.read(musicPlayerProvider.notifier);
+                    final setCurrentMusic =
+                        ref.watch(currentMusicProvider.notifier);
+
+                    return Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.skip_previous,
+                                color: Colors.white, size: 30),
+                            onPressed: () {
+                              setPlayState.playPrevious();
+                              setCurrentMusic.setCurrentMusic(playerState
+                                  .playlist[playerState.currentIndex - 1]);
+                            },
+                          ),
+                          const SizedBox(width: 10),
+                          IconButton(
+                            icon: Icon(
+                              playerState.isPlaying
+                                  ? Icons.pause_circle_filled
+                                  : Icons.play_circle_filled,
+                              color: Colors.white,
+                              size: 30,
+                            ),
+                            onPressed: () => setPlayState.togglePlay(),
+                          ),
+                          const SizedBox(width: 10),
+                          IconButton(
+                            icon: Icon(Icons.skip_next,
+                                color: Colors.white, size: 30),
+                            onPressed: () {
+                              setPlayState.playNext();
+                              setCurrentMusic.setCurrentMusic(playerState
+                                  .playlist[playerState.currentIndex + 1]);
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  })
+                ],
+              ),
+            )
+          ],
+        ),
+      );
+    });
   }
 }

@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:music_player/fetch_audio_functions.dart';
 import 'package:music_player/providers/music_player_provider.dart';
 import 'package:music_player/screens/music_fallback_icon.dart';
 
@@ -116,11 +117,11 @@ class SlidingBottomSheet extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            _formatDuration(playerState.position),
+                            formatDuration(playerState.position),
                             style: TextStyle(color: Colors.white70),
                           ),
                           Text(
-                            _formatDuration(playerState.duration),
+                            formatDuration(playerState.duration),
                             style: TextStyle(color: Colors.white70),
                           ),
                         ],
@@ -174,12 +175,5 @@ class SlidingBottomSheet extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return "$minutes:$seconds";
   }
 }
