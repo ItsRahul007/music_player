@@ -55,7 +55,7 @@ class MusicProvider extends StateNotifier<MusicProviderState> {
           files.map((file) => _processAudioFile(file as File)));
 
       state = state.copyWith(audioFiles: newAudioFiles);
-      changeAudioFilesArrayOrder(state.dropdownValue);
+      await changeAudioFilesArrayOrder(state.dropdownValue);
     } catch (e) {
       throw FileSystemException('Error scanning files: $e');
     }
@@ -170,7 +170,7 @@ class MusicProvider extends StateNotifier<MusicProviderState> {
     state = state.copyWith(playList: playList);
   }
 
-  void changeAudioFilesArrayOrder(String type) async {
+  Future<void> changeAudioFilesArrayOrder(String type) async {
     if (state.audioFiles.isEmpty) return;
     state = state.copyWith(isLoading: true);
 

@@ -23,7 +23,7 @@ class SingleMusicWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final setPlayState = ref.read(musicPlayerProvider.notifier);
-    final currentMusic = ref.watch(currentMusicProvider);
+    final currentMusic = ref.watch(currentMusicProvider).currentMusic;
     final setCurrentMusic = ref.read(currentMusicProvider.notifier);
 
     return Container(
@@ -32,11 +32,12 @@ class SingleMusicWidget extends ConsumerWidget {
         isThreeLine: true,
         onTap: () async {
           // Get the current playlist from the permission provider
-          final playlist = ref.read(musicProvider).playList;
+          final music = ref.watch(musicProvider);
 
           if (currentMusic == null || file.name != currentMusic.name) {
-            setCurrentMusic.setCurrentMusic(file);
-            setPlayState.setPlaylist(playlist, index);
+            setCurrentMusic.setAudioFiles(music.audioFiles);
+            setPlayState.setPlaylistAndPlay(
+                music.playList, music.audioFiles, index);
           } else {
             setPlayState.resumeAudio();
           }

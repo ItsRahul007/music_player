@@ -44,7 +44,7 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
     final music = ref.watch(musicProvider);
     final changeMusic = ref.read(musicProvider.notifier);
     final permission = ref.watch(permissionProvider);
-    final currentPlayingMusic = ref.watch(currentMusicProvider);
+    final currentPlayingMusic = ref.watch(currentMusicProvider).currentMusic;
 
     if (music.isLoading || permission.isLoading) {
       return const Loading();
@@ -69,24 +69,37 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
                       fontSize: 16),
                 ),
                 SizedBox(width: 15),
-                DropdownButton<String>(
-                  value: music.dropdownValue,
-                  items: orderByOptions.map((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(
-                        value,
-                        style: TextStyle(fontSize: 15),
-                      ),
+                Consumer(
+                  builder: (context, ref, child) {
+                    final setMusicPlayerState =
+                        ref.read(musicPlayerProvider.notifier);
+                    final setCurrentMusic =
+                        ref.read(currentMusicProvider.notifier);
+
+                    return DropdownButton<String>(
+                      value: music.dropdownValue,
+                      items: orderByOptions.map((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(
+                            value,
+                            style: TextStyle(fontSize: 15),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (String? value) async {
+                        if (value != null) {
+                          await changeMusic.changeAudioFilesArrayOrder(value);
+                          await setMusicPlayerState.setPlaylist(
+                              music.playList, music.audioFiles);
+
+                          setCurrentMusic.setAudioFiles(music.audioFiles);
+                        }
+                      },
+                      elevation: 16,
+                      style: TextStyle(color: Colors.white),
                     );
-                  }).toList(),
-                  onChanged: (String? value) {
-                    if (value != null) {
-                      changeMusic.changeAudioFilesArrayOrder(value);
-                    }
                   },
-                  elevation: 16,
-                  style: TextStyle(color: Colors.white),
                 ),
               ],
             )
@@ -132,7 +145,7 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
     }
 
     return Consumer(builder: (context, ref, child) {
-      final currentPlayingMusic = ref.watch(currentMusicProvider);
+      final currentPlayingMusic = ref.watch(currentMusicProvider).currentMusic;
       return Container(
         height: 70,
         margin: EdgeInsets.only(left: 15, right: 15, bottom: 15),
@@ -194,9 +207,6 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
                   Consumer(builder: (context, ref, child) {
                     final playerState = ref.watch(musicPlayerProvider);
                     final setPlayState = ref.read(musicPlayerProvider.notifier);
-                    final setCurrentMusic =
-                        ref.watch(currentMusicProvider.notifier);
-                    final musics = ref.watch(musicProvider);
 
                     return Expanded(
                       child: Row(
@@ -208,8 +218,6 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
                                 color: Colors.white, size: 30),
                             onPressed: () {
                               setPlayState.playPrevious();
-                              setCurrentMusic.setCurrentMusic(musics
-                                  .audioFiles[playerState.currentIndex - 1]);
                             },
                           ),
                           const SizedBox(width: 10),
@@ -229,8 +237,6 @@ class _AudioFileScannerState extends ConsumerState<AudioFileScanner> {
                                 color: Colors.white, size: 30),
                             onPressed: () {
                               setPlayState.playNext();
-                              setCurrentMusic.setCurrentMusic(musics
-                                  .audioFiles[playerState.currentIndex + 1]);
                             },
                           ),
                         ],

@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:music_player/fetch_audio_functions.dart';
 import 'package:music_player/providers/music_player_provider.dart';
-import 'package:music_player/providers/music_provider.dart';
 import 'package:music_player/screens/music_fallback_icon.dart';
 
 class SlidingBottomSheet extends StatelessWidget {
@@ -37,7 +36,7 @@ class SlidingBottomSheet extends StatelessWidget {
 
           // Song Info Row
           Consumer(builder: (context, ref, child) {
-            final currentMusic = ref.watch(currentMusicProvider);
+            final currentMusic = ref.watch(currentMusicProvider).currentMusic;
 
             return Padding(
               padding: const EdgeInsets.all(16.0),
@@ -46,18 +45,14 @@ class SlidingBottomSheet extends StatelessWidget {
                   if (currentMusic != null && currentMusic.base64Str != null)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
-                      child: Image.memory(
-                        base64Decode(currentMusic.base64Str!),
-                        width: 60,
-                        height: 60,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
+                      child: Image.memory(base64Decode(currentMusic.base64Str!),
                           width: 60,
                           height: 60,
-                          color: Colors.grey.shade800,
-                          child: Icon(Icons.music_note, color: Colors.white),
-                        ),
-                      ),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              MusicFallbackIcon(
+                                iconSize: 60,
+                              )),
                     )
                   else
                     MusicFallbackIcon(
@@ -136,8 +131,6 @@ class SlidingBottomSheet extends StatelessWidget {
           Consumer(builder: (context, ref, child) {
             final playerState = ref.watch(musicPlayerProvider);
             final setPlayState = ref.read(musicPlayerProvider.notifier);
-            final setCurrentMusic = ref.watch(currentMusicProvider.notifier);
-            final musics = ref.watch(musicProvider);
 
             return Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -145,10 +138,8 @@ class SlidingBottomSheet extends StatelessWidget {
                 IconButton(
                   icon:
                       Icon(Icons.skip_previous, color: Colors.white, size: 32),
-                  onPressed: () {
-                    setPlayState.playPrevious();
-                    setCurrentMusic.setCurrentMusic(
-                        musics.audioFiles[playerState.currentIndex - 1]);
+                  onPressed: () async {
+                    await setPlayState.playPrevious();
                   },
                 ),
                 const SizedBox(width: 16),
@@ -160,15 +151,13 @@ class SlidingBottomSheet extends StatelessWidget {
                     color: Colors.white,
                     size: 48,
                   ),
-                  onPressed: () => setPlayState.togglePlay(),
+                  onPressed: () async => await setPlayState.togglePlay(),
                 ),
                 const SizedBox(width: 16),
                 IconButton(
                   icon: Icon(Icons.skip_next, color: Colors.white, size: 32),
-                  onPressed: () {
-                    setPlayState.playNext();
-                    setCurrentMusic.setCurrentMusic(
-                        musics.audioFiles[playerState.currentIndex + 1]);
+                  onPressed: () async {
+                    await setPlayState.playNext();
                   },
                 ),
               ],
