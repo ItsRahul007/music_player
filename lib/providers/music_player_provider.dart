@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:music_player/constants/common.dart';
@@ -100,10 +99,8 @@ class MusicPlayerController extends StateNotifier<MusicPlayerState> {
   Future<void> setPlaylist(
       ConcatenatingAudioSource songs, List<AudioFile> audioFiles,
       [int initialIndex = 0]) async {
-    debugPrint("on tap index is $initialIndex");
     state = state.copyWith(
       playlist: songs,
-      currentIndex: initialIndex,
       audioFiles: audioFiles,
     );
 
@@ -146,16 +143,12 @@ class MusicPlayerController extends StateNotifier<MusicPlayerState> {
 
   Future<void> playNext() async {
     if (state.currentIndex < state.playlist.length - 1) {
-      final nextIndex = state.currentIndex + 1;
-      state = state.copyWith(currentIndex: nextIndex);
       await audioPlayer.seekToNext();
     }
   }
 
   Future<void> playPrevious() async {
     if (state.currentIndex > 0) {
-      final previousIndex = state.currentIndex - 1;
-      state = state.copyWith(currentIndex: previousIndex);
       await audioPlayer.seekToPrevious();
     }
   }

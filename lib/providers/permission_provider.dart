@@ -44,8 +44,6 @@ class PermissionProvider extends StateNotifier<PermissionState> {
           Permission.notification,
         ].request();
 
-        debugPrint("statuses: ${statuses.toString()}");
-
         final bool isPermissionGranted =
             statuses[Permission.audio]!.isGranted &&
                 statuses[Permission.manageExternalStorage]!.isGranted;
@@ -87,8 +85,6 @@ class PermissionProvider extends StateNotifier<PermissionState> {
         Permission.manageExternalStorage,
         Permission.notification
       ].request();
-
-      debugPrint("requestPermission: ${requestPermission.toString()}");
 
       if (requestPermission[Permission.audio]!.isGranted &&
           requestPermission[Permission.manageExternalStorage]!.isGranted) {

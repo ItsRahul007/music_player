@@ -10,6 +10,9 @@ Future<void> main() async {
     androidNotificationChannelId: 'com.rahulka.music_player',
     androidNotificationChannelName: 'Music Player',
     androidNotificationOngoing: true,
+    preloadArtwork: true,
+    androidResumeOnClick: true,
+    androidNotificationClickStartsActivity: true,
   );
   runApp(const ProviderScope(child: MyApp()));
 }
