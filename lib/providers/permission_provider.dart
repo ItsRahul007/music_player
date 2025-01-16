@@ -45,8 +45,7 @@ class PermissionProvider extends StateNotifier<PermissionState> {
         ].request();
 
         final bool isPermissionGranted =
-            statuses[Permission.audio]!.isGranted &&
-                statuses[Permission.manageExternalStorage]!.isGranted;
+            statuses[Permission.manageExternalStorage]!.isGranted;
 
         if (isPermissionGranted) {
           state = state.copyWith(havePermission: true, isLoading: false);
@@ -65,17 +64,14 @@ class PermissionProvider extends StateNotifier<PermissionState> {
   Future<void> manualRequestPermission() async {
     state = state.copyWith(isLoading: true);
 
-    PermissionStatus audioStatus = await Permission.audio.status;
     PermissionStatus manageExternalStorageStatus =
         await Permission.manageExternalStorage.status;
 
-    if (audioStatus.isPermanentlyDenied ||
-        manageExternalStorageStatus.isPermanentlyDenied) {
+    if (manageExternalStorageStatus.isPermanentlyDenied) {
       await openAppSettings();
-      audioStatus = await Permission.audio.status;
       manageExternalStorageStatus =
           await Permission.manageExternalStorage.status;
-      if (audioStatus.isGranted && manageExternalStorageStatus.isGranted) {
+      if (manageExternalStorageStatus.isGranted) {
         state = state.copyWith(havePermission: true);
       }
     } else {
@@ -86,8 +82,7 @@ class PermissionProvider extends StateNotifier<PermissionState> {
         Permission.notification
       ].request();
 
-      if (requestPermission[Permission.audio]!.isGranted &&
-          requestPermission[Permission.manageExternalStorage]!.isGranted) {
+      if (requestPermission[Permission.manageExternalStorage]!.isGranted) {
         state = state.copyWith(havePermission: true);
       } else {
         state = state.copyWith(havePermission: false);
@@ -98,8 +93,7 @@ class PermissionProvider extends StateNotifier<PermissionState> {
   }
 
   Future<bool> checkAudioPermissions() async {
-    bool permission = await Permission.audio.isGranted &&
-        await Permission.manageExternalStorage.isGranted;
+    bool permission = await Permission.manageExternalStorage.isGranted;
     state = state.copyWith(havePermission: permission);
     return permission;
   }
